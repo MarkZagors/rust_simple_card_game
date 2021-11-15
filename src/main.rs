@@ -4,7 +4,7 @@ mod cards;
 use cards::Card as Card;
 mod circle;
 use circle::CircleList as CircleList;
-use crossterm::terminal::enable_raw_mode;
+use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
 
 use std::{collections::LinkedList, io::stdout};
 use colored::*;
@@ -208,7 +208,7 @@ fn main() {
 \\__\\__,_|\\__| \\__, \\__,_|_|_|_\\___|
               |___/                
         \n");
-        println!("Up/Down arrows - select card");
+        println!("Up/Down arrows (q/a) - select card");
         println!("Enter - play selected card");
         println!("s - skip a turn");
         println!("Esc - Exit game\n");
@@ -221,6 +221,8 @@ fn main() {
         state.player_name.pop();
         if state.player_name.len() > 50 { state.player_name.truncate(47); state.player_name += "..."; }
         let mut all_cards = init_all_cards();
+
+        enable_raw_mode().unwrap();
         loop {
             let mut name_list : CircleList<String> = generate_enemy_names();
             state.enemy_name = get_enemy_name(&mut name_list);
@@ -239,6 +241,8 @@ fn main() {
                 match read().unwrap() {
                     Event::Key(KeyEvent{ code: KeyCode::Down, modifiers: KeyModifiers::NONE }) => cards_hand.move_next(),
                     Event::Key(KeyEvent{ code: KeyCode::Up, modifiers: KeyModifiers::NONE }) => cards_hand.move_prev(),
+                    Event::Key(KeyEvent{ code: KeyCode::Char('a'), modifiers: KeyModifiers::NONE }) => cards_hand.move_next(),
+                    Event::Key(KeyEvent{ code: KeyCode::Char('q'), modifiers: KeyModifiers::NONE }) => cards_hand.move_prev(),
                     Event::Key(KeyEvent{ code: KeyCode::Enter, modifiers: KeyModifiers::NONE }) => {
                         state.messages.clear();
 
@@ -265,7 +269,7 @@ fn main() {
                             draw_cards(&mut card_deck, &mut cards_hand, &all_cards, &mut state, 2);
                         }
                     },
-                    Event::Key(KeyEvent { code: KeyCode::Esc, modifiers: KeyModifiers::NONE }) => return,
+                    Event::Key(KeyEvent { code: KeyCode::Esc, modifiers: KeyModifiers::NONE }) => { disable_raw_mode().unwrap(); return },
                     _ => (),
                 }
             }
@@ -277,11 +281,13 @@ fn main() {
                 match read().unwrap() {
                     Event::Key(KeyEvent{ code: KeyCode::Down, modifiers: KeyModifiers::NONE }) => cards_choose.move_next(),
                     Event::Key(KeyEvent{ code: KeyCode::Up, modifiers: KeyModifiers::NONE }) => cards_choose.move_prev(),
+                    Event::Key(KeyEvent{ code: KeyCode::Char('a'), modifiers: KeyModifiers::NONE }) => cards_hand.move_next(),
+                    Event::Key(KeyEvent{ code: KeyCode::Char('q'), modifiers: KeyModifiers::NONE }) => cards_hand.move_prev(),
                     Event::Key(KeyEvent{ code: KeyCode::Enter, modifiers: KeyModifiers::NONE }) => {
                         all_cards.push_back(cards_choose.data.iter().nth(cards_choose.index).unwrap().clone());
                         break;
                     },
-                    Event::Key(KeyEvent { code: KeyCode::Esc, modifiers: KeyModifiers::NONE }) => return,
+                    Event::Key(KeyEvent { code: KeyCode::Esc, modifiers: KeyModifiers::NONE }) => { disable_raw_mode().unwrap(); return },
                     _ => (),
                 }
             }
@@ -294,6 +300,5 @@ fn main() {
             state.stage += 1;
         }
     }
-    
 }
 
