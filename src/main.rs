@@ -24,6 +24,7 @@ struct State {
     lose: bool,
     stage: i32,
     not_played: bool,
+    player_name: String,
 }
 
 fn render(state: &State) {
@@ -42,7 +43,7 @@ fn render(state: &State) {
     // println!("\u{2502}{:^75}\u{2502}", "\u{2694} 50 \u{2694}   Test   \u{2661} 50 \u{2661}");
 
     println!("\u{250c}{}\u{2510}", "\u{2500}".repeat(75));
-    println!("\u{2502}Hp: {:<71}\u{2502}", state.player_hp);
+    println!("\u{2502}Hp: {:<14}Name: {:<51}\u{2502}", state.player_hp, state.player_name);
     println!("\u{2514}{}\u{2518}", "\u{2500}".repeat(75));
 
     for message in &state.messages {
@@ -84,7 +85,7 @@ fn render_choose(cards_choose: &CircleList<Card>) {
     }
 }
 
-fn play_card(hand: &mut CircleList<Card>, state: &mut State) {
+fn play_card(hand: &mut CircleList<Card>, state: &mut State, cards_deck: &mut LinkedList<Card>, all_cards: &LinkedList<Card>) {
     let card = hand.get_current().clone();
     if hand.data.len() <= card.discard_ammount { state.not_played = true; return }
 
@@ -97,6 +98,11 @@ fn play_card(hand: &mut CircleList<Card>, state: &mut State) {
         "Big Bite" => { state.enemy_hp -= 10; },
         "Lick" => { state.player_hp += 5; },
         "Rage" => { state.enemy_hp -= 35; },
+        "Second Wind" => { state.player_hp += 75; },
+        "Bloodsucker" => { state.player_hp += 10; state.enemy_hp -= 10; },
+        "Sprint" => { draw_cards(cards_deck, hand, &all_cards, state, 3); },
+        "Refresh" => { draw_cards(cards_deck, hand, &all_cards, state, 6); state.player_hp += 10; },
+        "Scrach" => { draw_cards(cards_deck, hand, &all_cards, state, 2); state.enemy_hp -= 10; },
         _ => {},
     }
     state.messages.push_back(card.message);
@@ -150,9 +156,9 @@ fn init_all_cards() -> LinkedList<Card> {
     list.push_back(Card{ name: "Bite", description: "Deal 5 to enemy", discard_ammount: 0, message: "You deal 5 damage".to_string() });
     list.push_back(Card{ name: "Bite", description: "Deal 5 to enemy", discard_ammount: 0, message: "You deal 5 damage".to_string() });
     list.push_back(Card{ name: "Bite", description: "Deal 5 to enemy", discard_ammount: 0, message: "You deal 5 damage".to_string() });
-    list.push_back(Card{ name: "Lick", description: "Heal 5 to your", discard_ammount: 0, message: "You recover 5 health".to_string() });
-    list.push_back(Card{ name: "Lick", description: "Heal 5 to your", discard_ammount: 0, message: "You recover 5 health".to_string() });
-    list.push_back(Card{ name: "Lick", description: "Heal 5 to your", discard_ammount: 0, message: "You recover 5 health".to_string() });
+    list.push_back(Card{ name: "Lick", description: "Heal 5 to yourself", discard_ammount: 0, message: "You recover 5 health".to_string() });
+    list.push_back(Card{ name: "Lick", description: "Heal 5 to yourself", discard_ammount: 0, message: "You recover 5 health".to_string() });
+    list.push_back(Card{ name: "Lick", description: "Heal 5 to yourself", discard_ammount: 0, message: "You recover 5 health".to_string() });
     list
 }
 
@@ -165,12 +171,45 @@ fn generate_card_deck(all_cards: &LinkedList<Card>, state: &mut State) -> Linked
     list
 }
 
+fn generate_enemy_names() -> CircleList<String> {
+    let mut name_list: CircleList<String> = CircleList::new();
+    name_list.data.push_back("Bat".to_string());
+    name_list.data.push_back("Dog".to_string());
+    name_list.data.push_back("Rat".to_string());
+    name_list.data.push_back("Owl".to_string());
+    name_list.data.push_back("Mouse".to_string());
+    name_list.data.push_back("Snake".to_string());
+    name_list.data.push_back("Cockroach".to_string());
+    name_list
+}
 
 fn main() {
     loop { //New Game
+        let mut state = State{enemy_hp: 20, enemy_max_hp: 20, enemy_power:2, enemy_name: "Bat", player_hp: 20, messages: LinkedList::new(), win:false, enemy_cards: LinkedList::new(), lose: false, stage: 1, not_played: false, player_name: "".to_string()};
+         stdout()
+            .execute(Clear(ClearType::All)).unwrap()
+            .execute(MoveTo(0,0)).unwrap();
+        print!("
+        __                       
+ __ __ _| |_   __ _ __ _ _ __  ___ 
+/ _/ _` |  _| / _` / _` | '  \\/ -_)
+\\__\\__,_|\\__| \\__, \\__,_|_|_|_\\___|
+              |___/                
+        \n");
+        println!("Up/Down arrows - select card");
+        println!("Enter - play selected card");
+        println!("s - skip a turn");
+        println!("Esc - Exit game");
+        println!("Get as far as you can!");
+        println!("Enter your name: ");
+        std::io::stdin().read_line(&mut state.player_name).unwrap();
+        state.player_name.pop();
+        state.player_name.pop();
+        if state.player_name.len() > 50 { state.player_name.truncate(47); state.player_name += "..."; }
         let mut all_cards = init_all_cards();
-        let mut state = State{enemy_hp: 20, enemy_max_hp: 20, enemy_power:2, enemy_name: "Bat", player_hp: 20, messages: LinkedList::new(), win:false, enemy_cards: LinkedList::new(), lose: false, stage: 1, not_played: false};
         loop {
+            let name_list : CircleList<String> = generate_enemy_names();
+
             let mut cards_hand : CircleList<Card> = CircleList::new();
             let mut card_deck = generate_card_deck(&all_cards, &mut state);
             draw_cards(&mut card_deck, &mut cards_hand, &all_cards, &mut state, 3);
@@ -187,7 +226,7 @@ fn main() {
 
                         if state.win { break; }
                         if state.lose { break; }
-                        play_card(&mut cards_hand, &mut state);
+                        play_card(&mut cards_hand, &mut state, &mut card_deck, &all_cards);
 
                         if state.not_played { 
                             state.not_played = false;
