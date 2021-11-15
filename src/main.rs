@@ -14,6 +14,8 @@ use rand::Rng;
 
 struct State {
     enemy_hp: i32,
+    enemy_max_hp: i32,
+    enemy_power: i32,
     enemy_name: &'static str,
     enemy_cards: LinkedList<Card>,
     player_hp: i32,
@@ -107,7 +109,7 @@ fn enemy_play_card(state: &mut State) {
     let index: usize = rng.gen::<usize>() % state.enemy_cards.len();
     let card = state.enemy_cards.iter().nth(index).clone().unwrap();
     match card.name {
-        "Bite" => { state.player_hp -= 2; state.messages.push_back(format!("{} deals 2 damage", state.enemy_name)) },
+        "Bite" => { state.player_hp -= state.enemy_power; state.messages.push_back(format!("{} deals {} damage", state.enemy_name, state.enemy_power)) },
         _ => {},
     }
 }
@@ -155,9 +157,9 @@ fn generate_card_deck(all_cards: &LinkedList<Card>, state: &mut State) -> Linked
 
 fn main() {
     let mut all_cards = init_all_cards();
+    let mut state = State{enemy_hp: 20, enemy_max_hp: 20, enemy_power:2, enemy_name: "Bat", player_hp: 20, messages: LinkedList::new(), win:false, enemy_cards: LinkedList::new()};
     loop {
         let mut cards_hand : CircleList<Card> = CircleList::new();
-        let mut state = State{enemy_hp: 20, enemy_name: "Bat", player_hp: 20, messages: LinkedList::new(), win:false, enemy_cards: LinkedList::new()};
         let mut card_deck = generate_card_deck(&all_cards, &mut state);
         draw_cards(&mut card_deck, &mut cards_hand, &all_cards, &mut state, 3);
 
@@ -168,7 +170,7 @@ fn main() {
             match read().unwrap() {
                 Event::Key(KeyEvent{ code: KeyCode::Down, modifiers: KeyModifiers::NONE }) => cards_hand.move_next(),
                 Event::Key(KeyEvent{ code: KeyCode::Up, modifiers: KeyModifiers::NONE }) => cards_hand.move_prev(),
-                Event::Key(KeyEvent{ code: KeyCode::Enter, modifiers: KeyModifiers::NONE }) =>  {
+                Event::Key(KeyEvent{ code: KeyCode::Enter, modifiers: KeyModifiers::NONE }) => {
                     state.messages.clear();
 
                     if state.win { break; }
@@ -189,7 +191,7 @@ fn main() {
             match read().unwrap() {
                 Event::Key(KeyEvent{ code: KeyCode::Down, modifiers: KeyModifiers::NONE }) => cards_choose.move_next(),
                 Event::Key(KeyEvent{ code: KeyCode::Up, modifiers: KeyModifiers::NONE }) => cards_choose.move_prev(),
-                Event::Key(KeyEvent{ code: KeyCode::Enter, modifiers: KeyModifiers::NONE }) =>  {
+                Event::Key(KeyEvent{ code: KeyCode::Enter, modifiers: KeyModifiers::NONE }) => {
                     all_cards.push_back(cards_choose.data.iter().nth(cards_choose.index).unwrap().clone());
                     break;
                 },
@@ -197,6 +199,12 @@ fn main() {
                 _ => (),
             }
         }
+
+        state.enemy_max_hp += 10;
+        state.enemy_power += 1;
+        state.enemy_hp = state.enemy_max_hp;
+        state.win = false;
+        state.player_hp = 20;
     }
 }
 
