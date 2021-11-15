@@ -17,8 +17,8 @@ struct CardsAll {}
 impl CardsAll {
     pub fn new() -> LinkedList<Card> {
         let mut list = LinkedList::new();
-        list.push_back(Card{ name: "Big Bite", description: "Deal 10 to enemy hero", discard_ammount: 0, message: "You deal 10 damage".to_string() });
-        list.push_back(Card{ name: "Lick", description: "Heal 5 yourself", discard_ammount: 0, message: "You recover 5 health".to_string() });
+        list.push_back(Card{ name: "Big Bite", description: "Deal 10 to enemy", discard_ammount: 0, message: "You deal 10 damage".to_string() });
+        list.push_back(Card{ name: "Rage", description: "Deal 35 to enemy, discard 3 cards", discard_ammount: 3, message: "You deal 35 damage".to_string() });
         list
     }
 }
