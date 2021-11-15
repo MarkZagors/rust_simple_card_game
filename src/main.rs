@@ -21,6 +21,8 @@ struct State {
     player_hp: i32,
     messages: LinkedList<String>,
     win: bool,
+    lose: bool,
+    stage: i32,
 }
 
 fn render(state: &State) {
@@ -29,7 +31,7 @@ fn render(state: &State) {
     .execute(MoveTo(0,0)).unwrap();
 
     println!("\u{250c}{}\u{2510}", "\u{2500}".repeat(75));
-    println!("\u{2502}Hp: {:<14}Name: {:51}\u{2502}", state.enemy_hp, state.enemy_name);
+    println!("\u{2502}Hp: {:<14}Name: {:<14}Stage: {:<30}\u{2502}", state.enemy_hp, state.enemy_name, state.stage);
     println!("\u{2514}{}\u{2518}", "\u{2500}".repeat(75));
 
     // println!("\u{2502}{:^75}\u{2502}", "\u{2694} 50 \u{2694}   Test   \u{2661} 50 \u{2661}");
@@ -112,6 +114,12 @@ fn enemy_play_card(state: &mut State) {
         "Bite" => { state.player_hp -= state.enemy_power; state.messages.push_back(format!("{} deals {} damage", state.enemy_name, state.enemy_power)) },
         _ => {},
     }
+
+    if state.player_hp <= 0 {
+        state.messages.push_back("You lose :<".to_string());
+        state.messages.push_back("Press Esc to quit, or Enter to start a new game.".to_string());
+        state.lose = true;
+    }
 }
 
 fn discard(cards_hand: &mut CircleList<Card>, ammount: usize) {
@@ -156,55 +164,61 @@ fn generate_card_deck(all_cards: &LinkedList<Card>, state: &mut State) -> Linked
 
 
 fn main() {
-    let mut all_cards = init_all_cards();
-    let mut state = State{enemy_hp: 20, enemy_max_hp: 20, enemy_power:2, enemy_name: "Bat", player_hp: 20, messages: LinkedList::new(), win:false, enemy_cards: LinkedList::new()};
-    loop {
-        let mut cards_hand : CircleList<Card> = CircleList::new();
-        let mut card_deck = generate_card_deck(&all_cards, &mut state);
-        draw_cards(&mut card_deck, &mut cards_hand, &all_cards, &mut state, 3);
+    loop { //New Game
+        let mut all_cards = init_all_cards();
+        let mut state = State{enemy_hp: 20, enemy_max_hp: 20, enemy_power:2, enemy_name: "Bat", player_hp: 20, messages: LinkedList::new(), win:false, enemy_cards: LinkedList::new(), lose: false, stage: 1};
+        loop {
+            let mut cards_hand : CircleList<Card> = CircleList::new();
+            let mut card_deck = generate_card_deck(&all_cards, &mut state);
+            draw_cards(&mut card_deck, &mut cards_hand, &all_cards, &mut state, 3);
 
-        state.enemy_cards.push_back(Card{ name: "Bite", description: "", discard_ammount: 0, message: format!("{} deals 5 damage", state.enemy_name) });
-        loop { //GAME LOOP
-            render(&state);
-            render_cards(&cards_hand);
-            match read().unwrap() {
-                Event::Key(KeyEvent{ code: KeyCode::Down, modifiers: KeyModifiers::NONE }) => cards_hand.move_next(),
-                Event::Key(KeyEvent{ code: KeyCode::Up, modifiers: KeyModifiers::NONE }) => cards_hand.move_prev(),
-                Event::Key(KeyEvent{ code: KeyCode::Enter, modifiers: KeyModifiers::NONE }) => {
-                    state.messages.clear();
+            state.enemy_cards.push_back(Card{ name: "Bite", description: "", discard_ammount: 0, message: format!("{} deals 5 damage", state.enemy_name) });
+            loop { //GAME LOOP
+                render(&state);
+                render_cards(&cards_hand);
+                match read().unwrap() {
+                    Event::Key(KeyEvent{ code: KeyCode::Down, modifiers: KeyModifiers::NONE }) => cards_hand.move_next(),
+                    Event::Key(KeyEvent{ code: KeyCode::Up, modifiers: KeyModifiers::NONE }) => cards_hand.move_prev(),
+                    Event::Key(KeyEvent{ code: KeyCode::Enter, modifiers: KeyModifiers::NONE }) => {
+                        state.messages.clear();
 
-                    if state.win { break; }
-                    play_card(&mut cards_hand, &mut state);
-                    if !state.win {
-                        enemy_play_card(&mut state);
-                        draw_cards(&mut card_deck, &mut cards_hand, &all_cards, &mut state, 2);
-                    }
-                },
-                Event::Key(KeyEvent { code: KeyCode::Esc, modifiers: KeyModifiers::NONE }) => return,
-                _ => (),
+                        if state.win { break; }
+                        if state.lose { break; }
+                        play_card(&mut cards_hand, &mut state);
+                        if !state.win {
+                            enemy_play_card(&mut state);
+                            draw_cards(&mut card_deck, &mut cards_hand, &all_cards, &mut state, 2);
+                        }
+                    },
+                    Event::Key(KeyEvent { code: KeyCode::Esc, modifiers: KeyModifiers::NONE }) => return,
+                    _ => (),
+                }
             }
-        }
 
-        let mut cards_choose = cards::generate_choose();
-        loop { //CHOOSE CARD
-            render_choose(&cards_choose);
-            match read().unwrap() {
-                Event::Key(KeyEvent{ code: KeyCode::Down, modifiers: KeyModifiers::NONE }) => cards_choose.move_next(),
-                Event::Key(KeyEvent{ code: KeyCode::Up, modifiers: KeyModifiers::NONE }) => cards_choose.move_prev(),
-                Event::Key(KeyEvent{ code: KeyCode::Enter, modifiers: KeyModifiers::NONE }) => {
-                    all_cards.push_back(cards_choose.data.iter().nth(cards_choose.index).unwrap().clone());
-                    break;
-                },
-                Event::Key(KeyEvent { code: KeyCode::Esc, modifiers: KeyModifiers::NONE }) => return,
-                _ => (),
+            if state.lose { break; }
+            let mut cards_choose = cards::generate_choose();
+            loop { //CHOOSE CARD
+                render_choose(&cards_choose);
+                match read().unwrap() {
+                    Event::Key(KeyEvent{ code: KeyCode::Down, modifiers: KeyModifiers::NONE }) => cards_choose.move_next(),
+                    Event::Key(KeyEvent{ code: KeyCode::Up, modifiers: KeyModifiers::NONE }) => cards_choose.move_prev(),
+                    Event::Key(KeyEvent{ code: KeyCode::Enter, modifiers: KeyModifiers::NONE }) => {
+                        all_cards.push_back(cards_choose.data.iter().nth(cards_choose.index).unwrap().clone());
+                        break;
+                    },
+                    Event::Key(KeyEvent { code: KeyCode::Esc, modifiers: KeyModifiers::NONE }) => return,
+                    _ => (),
+                }
             }
-        }
 
-        state.enemy_max_hp += 10;
-        state.enemy_power += 1;
-        state.enemy_hp = state.enemy_max_hp;
-        state.win = false;
-        state.player_hp = 20;
+            state.enemy_max_hp += 10;
+            state.enemy_power += 1;
+            state.enemy_hp = state.enemy_max_hp;
+            state.win = false;
+            state.player_hp = 20;
+            state.stage += 1;
+        }
     }
+    
 }
 
